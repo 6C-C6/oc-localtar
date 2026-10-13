@@ -1,9 +1,9 @@
 -- Functions for building a huffman table and build the fixed table for zlib deflate chunk splitting.
 
-local modname=...
+local modname = ...
 if not modname then error("Warn: This is a lib for deflate_split.lua, do not use directly.") end
 
-local M={}
+local M = {}
 
 --===
 
@@ -20,9 +20,8 @@ end
 local function rev16(x)
   local lo = REV_BYTE[x & 0xFF]
   local hi = REV_BYTE[(x >> 8) & 0xFF]
-  return (lo<<8)|hi
+  return (lo << 8) | hi
 end
-
 
 local function reverse_bits(x, n)
   return rev16(x) >> (16 - n)
@@ -33,20 +32,18 @@ M.reverse_bits = reverse_bits
 
 --===
 
-
-
-local function build_huffman_table(lengths,max_bits)
-  max_bits=max_bits or 15;
+local function build_huffman_table(lengths, max_bits)
+  max_bits = max_bits or 15
   local max_len = 0
   for _, l in ipairs(lengths) do
     if l > max_len then max_len = l end
   end
   if max_len == 0 then
-    return {}, 0  
+    return {}, 0
   end
-  local size=1<<max_len
+  local size = 1 << max_len
   -- local codes=build_canonical_codes(lengths,max_bits)
-  local bl_count={}
+  local bl_count = {}
   for i = 0, max_bits do bl_count[i] = 0 end
   for _, l in ipairs(lengths) do
     if l > 0 then bl_count[l] = bl_count[l] + 1 end
@@ -97,7 +94,7 @@ local function build_fixed_table()
   return lit_tbl, lit_max, dist_tbl, dist_max
 end
 
-M.lit_tbl, M.lit_max, M.dist_tbl, M.dist_max=build_fixed_table()
+M.lit_tbl, M.lit_max, M.dist_tbl, M.dist_max = build_fixed_table()
 
 --==
 function M.decode_symbol(reader, tbl, max_len)

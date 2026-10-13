@@ -1,16 +1,17 @@
 -- download2buffer.lua
 -- 206 method currently not impl, since github archive doesn't support it
 local component = require("component")
-local internet=require("internet")
-local computer=require("computer")
-local MAX_BUFFER=516*1024--516kiB string buffer, should be larger than BUFFER_RAISE
-local READ_SIZE  = 2048
-local SLEEP_TIME = 0.05
-local WAIT_TIME = 0.2
-local MAX_IDLE = 45 --45s without response
-local REFRESH_TIME=1.0
-local DEFAULT_UA = "OpenComputers-TapeArchive"
-local M={}
+local internet  = require("internet")
+local computer  = require("computer")
+local MAX_BUFFER = 516 * 1024 -- 516kiB string buffer, should be larger than BUFFER_RAISE
+local READ_SIZE   = 2048
+local SLEEP_TIME  = 0.05
+local WAIT_TIME   = 0.2
+local MAX_IDLE    = 45 -- 45s without response
+local REFRESH_TIME = 1.0
+local DEFAULT_UA  = "OpenComputers-TapeArchive"
+local M = {}
+
 M.NEED_MORE = setmetatable({}, { __tostring = function() return "NEED_MORE" end })
 
 local Buffer = {}
@@ -39,21 +40,21 @@ function Buffer:extract(n)
   return chunk
 end
 
-function Buffer:remain(  )
+function Buffer:remain()
   return self.maxSize - #self.data
 end
 
 function Buffer:push(chunk)
   if not chunk or #chunk == 0 then return 0 end
-  if self:remain() < #chunk then 
+  if self:remain() < #chunk then
     error("buffer pushed over max size! should check remain before push.")
   end
-  self.data   = self.data .. chunk
+  self.data = self.data .. chunk
   return #chunk
 end
 
-function Buffer:setEOF()  self.eof = true end
-function Buffer:size()    return #self.data end
+function Buffer:setEOF() self.eof = true end
+function Buffer:size()   return #self.data end
 
 --==
 
@@ -65,8 +66,6 @@ local function getHeader(headers, name)
 end
 
 --==
-
-
 
 local function buildHeaders(opts, startOff)
   local headers = {}
@@ -94,9 +93,8 @@ end
 
 --==
 
-local function connect(url,opts)
-  local startOff  = opts.offset    or 0
-
+local function connect(url, opts)
+  local startOff = opts.offset or 0
 
   local headers = buildHeaders(opts, startOff)
 
@@ -147,12 +145,12 @@ local function connect(url,opts)
   end
 
   return {
-    handle          = handle,
-    code            = code,
-    message         = message,
-    headers         = respHeaders,
-    offset          = actualOffset,
-    mode            = mode,
+    handle  = handle,
+    code    = code,
+    message = message,
+    headers = respHeaders,
+    offset  = actualOffset,
+    mode    = mode,
   }
 end
 
@@ -163,7 +161,7 @@ function M.open(url, opts)
   opts = opts or {}
   local readSize  = opts.readSize  or READ_SIZE
   local maxBuffer = opts.maxBuffer or MAX_BUFFER
-  local conn,err=connect(url,opts)
+  local conn, err = connect(url, opts)
   if not conn then return nil, err end
 
   return setmetatable({
@@ -186,12 +184,12 @@ end
 
 function Stream:extract(n)
   if self.closed then return nil end
-  local extracted=self.buffer:extract(n)
-  if extracted==M.NEED_MORE then
+  local extracted = self.buffer:extract(n)
+  if extracted == M.NEED_MORE then
     self:refill()
-    extracted=self.buffer:extract(n)
+    extracted = self.buffer:extract(n)
   end
-  if self:idleTime()>MAX_IDLE then
+  if self:idleTime() > MAX_IDLE then
     error("connection reset by peer")
   end
   return extracted
@@ -202,11 +200,11 @@ function Stream:refill()
     return false
   end
   local read_cnt = 0
-  
+
   if self.buffer:remain() < #self.tmp_chunk then
     return false
   end
-  local pu_time=self.lastActive
+  local pu_time = self.lastActive
   repeat
     local chunk = self.handle.read(self.readSize)
     if chunk == nil then
@@ -227,16 +225,16 @@ function Stream:refill()
       self.buffer:push(self.tmp_chunk)
       self.lastActive = computer.uptime()
       self.tmp_chunk = chunk
-      if self.lastActive-pu_time>REFRESH_TIME then 
-        io.write("\rbuffer "..math.floor(#self.buffer.data/1024).."kiB, MEMORY "..math.ceil((1-computer.freeMemory()/computer.totalMemory())*100).."%")
-        pu_time=self.lastActive
+      if self.lastActive - pu_time > REFRESH_TIME then
+        io.write("\rbuffer " .. math.floor(#self.buffer.data / 1024) .. "kiB, MEMORY " .. math.ceil((1 - computer.freeMemory() / computer.totalMemory()) * 100) .. "%")
+        pu_time = self.lastActive
       end
     end
     os.sleep(SLEEP_TIME)
   until self.buffer:remain() < #self.tmp_chunk
-    or read_cnt > math.ceil(self.buffer.maxSize / self.readSize)*10 -- abnormal slow net
-    print("")
-  print("refill done with " .. read_cnt .. " steps and remains "..self.buffer:remain().." bytes on buffer")
+    or read_cnt > math.ceil(self.buffer.maxSize / self.readSize) * 10 -- abnormal slow net
+  print("")
+  print("refill done with " .. read_cnt .. " steps and remains " .. self.buffer:remain() .. " bytes on buffer")
   return true
 end
 

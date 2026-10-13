@@ -1,19 +1,20 @@
 -- deflate_split.lua
-package.loaded["huffman_build"]    = nil
-package.loaded["bit_reader"]    = nil
+package.loaded["huffman_build"] = nil
+package.loaded["bit_reader"]   = nil
 local component = require("component")
 local HB        = require("huffman_build")
 local BR        = require("bit_reader")
-local os=require("os")
+local os        = require("os")
 print("data limit:" .. component.data.getLimit())
 
 local lit_tbl, lit_max   = HB.lit_tbl,  HB.lit_max
 local dist_tbl, dist_max = HB.dist_tbl, HB.dist_max
 
 --==
+
 local LEN_EXTRA = {0,0,0,0,0,0,0,0,1,1,1,1,2,2,2,2,3,3,3,3,
 4,4,4,4,5,5,5,5,0}
-local DIST_EXTRA= {0,0,0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,
+local DIST_EXTRA = {0,0,0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,
 9,9,10,10,11,11,12,12,13,13}
 
 --==
@@ -93,7 +94,7 @@ local function parse_dynamic_header(reader)
   local i = 1
 
   while i <= total do
-    if not reader:can_read(7+7) then return nil end
+    if not reader:can_read(7 + 7) then return nil end
     local sym = HB.decode_symbol(reader, cl_tbl, cl_max)
 
     if sym < 16 then
@@ -128,20 +129,20 @@ end
 
 --==
 
-local function find_block_boundaries(data, start_bit,limit)
-  local MAX_LIMIT=component.data.getLimit()-(1<<16) --inflate max 1MB, minus the prefix 32KB times 2 (x2 for safety)
-  limit=limit or MAX_LIMIT
-  limit=math.min(limit,MAX_LIMIT)
-  print("FB limit: "..limit)
+local function find_block_boundaries(data, start_bit, limit)
+  local MAX_LIMIT = component.data.getLimit() - (1 << 16) -- inflate max 1MB, minus the prefix 32KB times 2 (x2 for safety)
+  limit = limit or MAX_LIMIT
+  limit = math.min(limit, MAX_LIMIT)
+  print("FB limit: " .. limit)
   local reader     = BR.new_reader(data, 1, start_bit or 0)
   local boundaries = {}
   local final = 0
-  local chunk_cnt=0
+  local chunk_cnt = 0
   repeat
-    chunk_cnt=chunk_cnt+1
-    if chunk_cnt%1==0 then
-      io.write("\rPosition in currnet part: "..reader.pos) 
-      --go through 16 chunks
+    chunk_cnt = chunk_cnt + 1
+    if chunk_cnt % 1 == 0 then
+      io.write("\rPosition in current part: " .. reader.pos)
+      -- go through 16 chunks
       os.sleep(0)
     end
     if not reader:can_read(3) then
@@ -177,11 +178,11 @@ local function find_block_boundaries(data, start_bit,limit)
         end
       end
       if not ok_read then
-        --rewind happened
+        -- rewind happened
         reader:restore(block_snap)
         break
       end
-      if #boundaries>0 then
+      if #boundaries > 0 then
         table.insert(boundaries, {
           byte  = block_start_byte,
           bit   = block_start_bit,
@@ -206,7 +207,7 @@ local function find_block_boundaries(data, start_bit,limit)
       error("invalid block type 3")
     end
     if not ok_read then
-      --rewind happened
+      -- rewind happened
       reader:restore(block_snap)
       break
     end
@@ -216,14 +217,14 @@ local function find_block_boundaries(data, start_bit,limit)
       kind  = kind,
       final = (final == 1),
     })
-    if final==1 then break end
-  until reader.pos>limit
+    if final == 1 then break end
+  until reader.pos > limit
   -- the latest block can't be contained, except for final, final may also too large to be contained
-  if #boundaries>0 and boundaries[#boundaries].final then
+  if #boundaries > 0 and boundaries[#boundaries].final then
     local boff       = reader:bit_offset()
     local block_start_byte = boff >> 3
     local block_start_bit  = boff & 7
-    if block_start_byte<limit and (#boundaries==1 or not boundaries[#boundaries].kind=="stored") then
+    if block_start_byte < limit and (#boundaries == 1 or not boundaries[#boundaries].kind == "stored") then
       -- final block can be contained
       -- it's not a stored block, unless there's only one
       table.insert(boundaries, {

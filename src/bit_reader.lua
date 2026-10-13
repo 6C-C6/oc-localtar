@@ -1,19 +1,19 @@
 -- Read data that are not byte-alligned
-local modname=...
+local modname = ...
 if not modname then error("Warn: This is a lib for deflate_split.lua, do not use directly.") end
 
-local M={}
+local M = {}
 
 local BitReader = {}
 BitReader.__index = BitReader
 
 function M.new_reader(data, start_byte, start_bit)
   local r = setmetatable({
-    data = data,
-    len  = #data,
-    pos  = start_byte or 1,
-    buf  = 0,  
-    nbits= 0,     
+    data  = data,
+    len   = #data,
+    pos   = start_byte or 1,
+    buf   = 0,
+    nbits = 0,
   }, BitReader)
   if start_bit and start_bit > 0 then
     r:_prime_start(start_bit)
